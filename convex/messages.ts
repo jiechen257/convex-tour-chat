@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const list = query({
   args: {},
@@ -30,9 +31,17 @@ export const list = query({
 
 export const send = mutation({
   args: { body: v.string(), author: v.string() },
-  handler: async (ctx, { body, author }) => {
+  handler: async (ctx, args) => {
+    const { body, author } = args;
     // Send a new message.
     await ctx.db.insert("messages", { body, author });
+
+    if (body.startsWith("@ai") && author !== "AI") {
+      // Schedule the chat action to run immediately
+      await ctx.scheduler.runAfter(0, api.ai.chat, {
+        messageBody: body,
+      });
+    }
   },
 });
 
